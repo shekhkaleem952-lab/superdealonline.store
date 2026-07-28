@@ -13,9 +13,10 @@ import { COMPANY_INFO, PRODUCT_CATEGORIES } from '../data/storeData';
 interface FooterProps {
   setCurrentPage: (page: string) => void;
   setCategoryFilter?: (category: string) => void;
+  onOpenPolicy?: (policy: 'privacy' | 'refund' | 'terms' | 'faq' | 'delivery') => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ setCurrentPage, setCategoryFilter }) => {
+export const Footer: React.FC<FooterProps> = ({ setCurrentPage, setCategoryFilter, onOpenPolicy }) => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
@@ -205,16 +206,16 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage, setCategoryFilte
         </div>
 
         {/* Main Footer Links */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-12 border-b border-gray-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 pb-12 border-b border-gray-800">
           
           {/* Brand Info */}
-          <div className="lg:col-span-4 space-y-4">
+          <div className="lg:col-span-3 space-y-4">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-xl bg-[#0057FF] flex items-center justify-center text-white font-bold shadow-md">
                 <Sparkles className="w-6 h-6 text-amber-300" />
               </div>
               <div>
-                <h4 className="font-playfair text-xl font-bold text-white tracking-tight">
+                <h4 className="font-playfair text-lg font-bold text-white tracking-tight">
                   Super Deal Online.Store
                 </h4>
                 <p className="text-[10px] text-amber-400 font-bold tracking-widest uppercase">
@@ -227,18 +228,18 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage, setCategoryFilte
               Qatar’s trusted destination for high quality mobile accessories, smart watches, AirPods, Bluetooth speakers, home essentials, and beauty products with express delivery across Doha and all municipalities.
             </p>
 
-            <div className="space-y-2 text-xs text-gray-300 pt-2">
+            <div className="space-y-2 text-xs text-gray-300 pt-1">
               <div className="flex items-center gap-2.5">
                 <Truck className="w-4 h-4 text-[#0057FF] shrink-0" />
-                <span>Free Express Delivery over 150 QAR</span>
+                <span>Free Delivery over 150 QAR</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <DollarSign className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Cash on Delivery Available Across Qatar</span>
+                <span>Cash on Delivery Across Qatar</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-1">
               <a
                 href={whatsappUrl}
                 target="_blank"
@@ -253,8 +254,8 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage, setCategoryFilte
 
           {/* Quick Links */}
           <div className="lg:col-span-2 space-y-3">
-            <h5 className="font-bold text-sm text-white uppercase tracking-wider border-b border-gray-800 pb-2">
-              Quick Links
+            <h5 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider border-b border-gray-800 pb-2">
+              Navigation
             </h5>
             <ul className="space-y-2 text-xs text-gray-400">
               <li>
@@ -268,18 +269,13 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage, setCategoryFilte
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('new-arrivals')} className="hover:text-[#0057FF] transition-colors cursor-pointer">
+                <button onClick={() => navigate('categories', 'trending')} className="hover:text-[#0057FF] transition-colors cursor-pointer">
                   New Arrivals
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('best-sellers')} className="hover:text-[#0057FF] transition-colors cursor-pointer">
+                <button onClick={() => navigate('categories', 'smart-watches')} className="hover:text-[#0057FF] transition-colors cursor-pointer">
                   Best Sellers
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('deals')} className="hover:text-[#0057FF] transition-colors cursor-pointer">
-                  Hot Deals
                 </button>
               </li>
               <li>
@@ -292,16 +288,21 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage, setCategoryFilte
                   Contact Support
                 </button>
               </li>
+              <li className="pt-2 border-t border-gray-800">
+                <button onClick={() => navigate('admin')} className="text-amber-400 hover:text-amber-300 font-bold transition-colors cursor-pointer flex items-center gap-1">
+                  <span>🔒 Admin Portal</span>
+                </button>
+              </li>
             </ul>
           </div>
 
-          {/* Categories */}
-          <div className="lg:col-span-3 space-y-3">
-            <h5 className="font-bold text-sm text-white uppercase tracking-wider border-b border-gray-800 pb-2">
+          {/* Top Categories */}
+          <div className="lg:col-span-2 space-y-3">
+            <h5 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider border-b border-gray-800 pb-2">
               Top Categories
             </h5>
             <ul className="space-y-2 text-xs text-gray-400">
-              {PRODUCT_CATEGORIES.map((cat) => (
+              {PRODUCT_CATEGORIES.slice(0, 6).map((cat) => (
                 <li key={cat.id}>
                   <button
                     onClick={() => navigate('categories', cat.id)}
@@ -314,9 +315,43 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage, setCategoryFilte
             </ul>
           </div>
 
+          {/* Customer Policies */}
+          <div className="lg:col-span-2 space-y-3">
+            <h5 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider border-b border-gray-800 pb-2">
+              Store Policies
+            </h5>
+            <ul className="space-y-2 text-xs text-gray-400">
+              <li>
+                <button onClick={() => onOpenPolicy?.('delivery')} className="hover:text-[#0057FF] transition-colors cursor-pointer text-left">
+                  Delivery Information
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onOpenPolicy?.('refund')} className="hover:text-[#0057FF] transition-colors cursor-pointer text-left">
+                  Refund & Return Policy
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onOpenPolicy?.('privacy')} className="hover:text-[#0057FF] transition-colors cursor-pointer text-left">
+                  Privacy Policy
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onOpenPolicy?.('terms')} className="hover:text-[#0057FF] transition-colors cursor-pointer text-left">
+                  Terms & Conditions
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onOpenPolicy?.('faq')} className="hover:text-[#0057FF] transition-colors cursor-pointer text-left">
+                  FAQ & Help Center
+                </button>
+              </li>
+            </ul>
+          </div>
+
           {/* Contact Details */}
           <div className="lg:col-span-3 space-y-4">
-            <h5 className="font-bold text-sm text-white uppercase tracking-wider border-b border-gray-800 pb-2">
+            <h5 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider border-b border-gray-800 pb-2">
               Customer Support
             </h5>
             <div className="space-y-2.5 text-xs text-gray-300">
@@ -347,6 +382,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage, setCategoryFilte
               </p>
             </div>
           </div>
+
         </div>
 
         {/* Payment Icons & Copyright */}

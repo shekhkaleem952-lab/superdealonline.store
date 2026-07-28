@@ -2,15 +2,19 @@ export interface Product {
   id: string;
   name: string;
   nameArabic?: string;
-  category: 'mobile-acc' | 'smart-watches' | 'airpods' | 'speakers' | 'beauty' | 'home' | 'electronics' | 'trending';
+  category: 'mobile-acc' | 'smart-watches' | 'airpods' | 'speakers' | 'beauty' | 'home' | 'electronics' | 'trending' | string;
   categoryLabel: string;
   price: number; // in QAR
   originalPrice: number; // in QAR
   discountPercent: number;
   rating: number; // e.g. 4.9
   reviewCount: number;
+  sku?: string;
+  shortDescription?: string;
   description: string;
   specs: string[];
+  specifications?: Record<string, string>;
+  stockQuantity?: number;
   image: string;
   additionalImages?: string[];
   inStock: boolean;
@@ -83,3 +87,61 @@ export interface CompanyInfo {
   freeDeliveryThreshold: number;
   standardDeliveryFee: number;
 }
+
+// Future-Ready Order & Inventory Data Models
+export interface OrderCustomerInfo {
+  fullName: string;
+  phone: string;
+  whatsappNumber?: string;
+  email?: string;
+  city: string;
+  zoneArea: string;
+  streetAddress: string;
+  buildingNum?: string;
+  paymentMethod: 'cod' | 'card_pos' | 'qmp';
+  notes?: string;
+}
+
+export interface OrderItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  color?: string;
+  image: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  date: string;
+  customer: OrderCustomerInfo;
+  items: OrderItem[];
+  subtotal: number;
+  deliveryFee: number;
+  discount: number;
+  total: number;
+  status: 'pending' | 'processing' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  createdAt: string;
+}
+
+export interface Customer {
+  id: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  city: string;
+  totalOrders: number;
+  totalSpent: number;
+  lastOrderDate: string;
+}
+
+export interface InventoryItem {
+  productId: string;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  lastRestocked: string;
+}
+
+export type Language = 'en' | 'ar';
+
