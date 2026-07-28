@@ -129,25 +129,27 @@ export default function App() {
               )}
 
               {/* Global Navbar */}
-              <Navbar
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-                cartCount={totalCartCount}
-                setIsCartOpen={setIsCartOpen}
-                onOpenWishlist={() => setIsWishlistOpen(true)}
-                onOpenAccount={() => setIsAccountOpen(true)}
-                onSelectProduct={(product) => setQuickViewProduct(product)}
-                categoryFilter={selectedCategoryFilter}
-                setCategoryFilter={setSelectedCategoryFilter}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                onSearchSubmit={(query) => {
-                  setSearchQuery(query);
-                  setCurrentPage('categories');
-                  setSelectedCategoryFilter('all');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-              />
+              {currentPage !== 'admin' && (
+                <Navbar
+                  currentPage={currentPage}
+                  setCurrentPage={setCurrentPage}
+                  cartCount={totalCartCount}
+                  setIsCartOpen={setIsCartOpen}
+                  onOpenWishlist={() => setIsWishlistOpen(true)}
+                  onOpenAccount={() => setIsAccountOpen(true)}
+                  onSelectProduct={(product) => setQuickViewProduct(product)}
+                  categoryFilter={selectedCategoryFilter}
+                  setCategoryFilter={setSelectedCategoryFilter}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  onSearchSubmit={(query) => {
+                    setSearchQuery(query);
+                    setCurrentPage('categories');
+                    setSelectedCategoryFilter('all');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+              )}
 
               {/* Page Views */}
               <main className="flex-1">
@@ -244,14 +246,16 @@ export default function App() {
               />
 
               {/* Floating WhatsApp Action Button */}
-              <FloatingWhatsApp />
+              {currentPage !== 'admin' && <FloatingWhatsApp />}
 
               {/* Global Footer */}
-              <Footer
-                setCurrentPage={setCurrentPage}
-                setCategoryFilter={setSelectedCategoryFilter}
-                onOpenPolicy={(policy) => setPolicyModalType(policy)}
-              />
+              {currentPage !== 'admin' && (
+                <Footer
+                  setCurrentPage={setCurrentPage}
+                  setCategoryFilter={setSelectedCategoryFilter}
+                  onOpenPolicy={(policy) => setPolicyModalType(policy)}
+                />
+              )}
 
             </div>
           </ReviewProvider>
