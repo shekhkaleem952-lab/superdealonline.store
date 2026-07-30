@@ -1,0 +1,6 @@
+{
+  "name": "Super Deal Online Store",
+  "description": "Qatar's premier online store for electronics, smart watches, AirPods, mobile accessories, home essentials, and beauty products with express delivery across Qatar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
