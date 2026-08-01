@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Mail, ShieldCheck, ArrowRight, Store, KeyRound } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface AdminLoginProps {
   onLoginSuccess: () => void;
@@ -7,35 +8,68 @@ interface AdminLoginProps {
 }
 
 export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackToStore }) => {
-  const [email, setEmail] = useState('admin@superdeal.store');
+  const { adminSignIn, setupSuperAdminAccount } = useAuth();
+  const [email, setEmail] = useState('info@superdealonline.store');
   const [password, setPassword] = useState('admin123');
+  const [isSetupMode, setIsSetupMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     setIsLoading(true);
 
-    setTimeout(() => {
-      // Demo validation - allows admin / admin123 or any email with admin password
-      if (email.trim() && password.trim()) {
-        onLoginSuccess();
+    try {
+      if (isSetupMode) {
+        const { error: setupErr } = await setupSuperAdminAccount(password.trim());
+        if (setupErr) {
+          setError(setupErr.message || 'Failed to setup super admin account.');
+        } else {
+          setSuccess('Super admin account (info@superdealonline.store) initialized successfully!');
+          setTimeout(() => {
+            onLoginSuccess();
+          }, 600);
+        }
       } else {
-        setError('Please enter valid administrator credentials.');
+        const { error: signErr } = await adminSignIn(email.trim(), password.trim());
+        if (signErr) {
+          setError(signErr.message || 'Invalid admin credentials or account not provisioned.');
+        } else {
+          onLoginSuccess();
+        }
       }
+    } catch (err: any) {
+      setError('Authentication failed. Please check credentials.');
+    } finally {
       setIsLoading(false);
-    }, 600);
+    }
   };
 
-  const handleDemoLogin = () => {
-    setEmail('admin@superdeal.store');
+  const handleDemoLogin = async () => {
+    setEmail('info@superdealonline.store');
     setPassword('admin123');
     setIsLoading(true);
-    setTimeout(() => {
-      onLoginSuccess();
+    setError(null);
+    setSuccess(null);
+    try {
+      // First try sign in, if not registered yet, run setup
+      const { error: signErr } = await adminSignIn('info@superdealonline.store', 'admin123');
+      if (signErr) {
+        const { error: setupErr } = await setupSuperAdminAccount('admin123');
+        if (setupErr) {
+          setError(setupErr.message);
+        } else {
+          onLoginSuccess();
+        }
+      } else {
+        onLoginSuccess();
+      }
+    } finally {
       setIsLoading(false);
-    }, 400);
+    }
   };
 
   return (
@@ -53,10 +87,12 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
           </div>
 
           <h1 className="text-3xl font-black font-playfair tracking-tight text-white">
-            Store Management
+            {isSetupMode ? 'Initial Admin Setup' : 'Store Management'}
           </h1>
           <p className="text-xs text-slate-400">
-            Sign in to manage inventory, customer orders, catalog, and settings
+            {isSetupMode
+              ? 'Provision initial super_admin account for info@superdealonline.store'
+              : 'Sign in with Supabase Authentication to manage catalog & orders'}
           </p>
         </div>
 
@@ -69,25 +105,37 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
             </div>
           )}
 
+          {success && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold p-3.5 rounded-2xl flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              {success}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Admin Email or Username</label>
+              <label className="text-xs font-bold text-slate-300">Super Admin Email</label>
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                 <input
                   type="text"
                   required
+                  readOnly={isSetupMode}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@superdeal.store"
-                  className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl pl-10 pr-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0057FF] focus:ring-1 focus:ring-[#0057FF]"
+                  placeholder="info@superdealonline.store"
+                  className={`w-full bg-slate-900/90 border border-slate-700 rounded-2xl pl-10 pr-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0057FF] focus:ring-1 focus:ring-[#0057FF] ${
+                    isSetupMode ? 'opacity-80' : ''
+                  }`}
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-slate-300">Password</label>
+                <label className="text-xs font-bold text-slate-300">
+                  {isSetupMode ? 'Set Admin Password' : 'Password'}
+                </label>
                 <span className="text-[11px] text-blue-400 font-medium">Default: admin123</span>
               </div>
               <div className="relative">
@@ -109,10 +157,10 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
               className="w-full bg-[#0057FF] hover:bg-blue-600 text-white font-bold text-xs py-3.5 rounded-2xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50 mt-2"
             >
               {isLoading ? (
-                <span>Authenticating...</span>
+                <span>Processing Supabase Auth...</span>
               ) : (
                 <>
-                  <span>Sign In to Admin Panel</span>
+                  <span>{isSetupMode ? 'Register & Provision Super Admin' : 'Sign In with Supabase Auth'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -120,13 +168,28 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
           </form>
 
           <div className="relative border-t border-slate-700/60 pt-4 text-center space-y-3">
+            <div className="flex justify-between items-center text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSetupMode(!isSetupMode);
+                  setError(null);
+                  setSuccess(null);
+                  setEmail('info@superdealonline.store');
+                }}
+                className="text-amber-400 hover:underline font-bold cursor-pointer"
+              >
+                {isSetupMode ? '← Back to Admin Login' : 'First-Time Setup (Create info@superdealonline.store)'}
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={handleDemoLogin}
               className="w-full bg-slate-700/60 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-bold py-2.5 rounded-2xl flex items-center justify-center gap-2 cursor-pointer transition-all"
             >
               <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-              <span>One-Click Demo Admin Login</span>
+              <span>Auto-Setup & Authenticate Super Admin</span>
             </button>
 
             <button
@@ -141,7 +204,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
         </div>
 
         <p className="text-[11px] text-center text-slate-500">
-          Super Deal Online.Store Qatar • Protected Admin Panel
+          Super Deal Online.Store Qatar • Protected Admin Panel (role: super_admin)
         </p>
       </div>
     </div>

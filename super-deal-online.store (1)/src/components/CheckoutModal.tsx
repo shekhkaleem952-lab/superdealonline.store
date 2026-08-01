@@ -3,6 +3,7 @@ import { X, CheckCircle, CreditCard, Truck, MapPin, Phone, ShieldCheck, Sparkles
 import { WhatsAppIcon } from './icons/WhatsAppIcon';
 import { CartItem } from '../types';
 import { COMPANY_INFO } from '../data/storeData';
+import { useStore } from '../context/StoreContext';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   discountPercent,
   onSuccess,
 }) => {
+  const { addOrder } = useStore();
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'pos' | 'applepay'>('cod');
   const [formData, setFormData] = useState({
     name: '',
@@ -42,17 +44,43 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const deliveryFee = subtotal >= COMPANY_INFO.freeDeliveryThreshold ? 0 : COMPANY_INFO.standardDeliveryFee;
   const grandTotal = Math.max(0, subtotal - discountAmount + deliveryFee);
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const generatedOrderNum = `SDQ-${Math.floor(100000 + Math.random() * 900000)}`;
-      setOrderNumber(generatedOrderNum);
+    try {
+      const createdOrder = await addOrder({
+        customer: {
+          fullName: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          city: formData.city,
+          zoneArea: formData.zone ? `Zone ${formData.zone}` : 'Doha',
+          streetAddress: `Street ${formData.street || 'Main'}, Bldg ${formData.building || '1'}`,
+          paymentMethod: paymentMethod === 'pos' ? 'card_pos' : 'cod',
+          notes: formData.notes,
+        },
+        items: cart.map((item) => ({
+          productId: item.productId || item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+        })),
+        subtotal,
+        deliveryFee,
+        discount: discountAmount,
+        total: grandTotal,
+      });
+
+      setOrderNumber(createdOrder.orderNumber);
       setOrderConfirmed(true);
       onSuccess();
-    }, 1000);
+    } catch (err) {
+      console.error('Failed to submit order:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Pre-fill WhatsApp Confirmation Receipt

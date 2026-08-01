@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AuthProvider } from './context/AuthContext';
 import { ReviewProvider } from './context/ReviewContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { WishlistProvider } from './context/WishlistContext';
@@ -114,10 +115,11 @@ export default function App() {
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <LanguageProvider>
-      <StoreProvider>
-        <WishlistProvider>
-          <ReviewProvider>
+    <AuthProvider>
+      <LanguageProvider>
+        <StoreProvider>
+          <WishlistProvider>
+            <ReviewProvider>
             <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
               
               {/* Toast Popup */}
@@ -262,5 +264,6 @@ export default function App() {
         </WishlistProvider>
       </StoreProvider>
     </LanguageProvider>
+  </AuthProvider>
   );
 }

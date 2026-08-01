@@ -29,7 +29,14 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({ 
   if (!order) return null;
 
   const handleStatusChange = (newStatus: Order['status']) => {
-    updateOrderStatus(order.id, newStatus);
+    if (newStatus === 'cancelled') {
+      const reason = window.prompt('Please specify the reason for order cancellation:', 'Customer requested cancellation / Out of stock');
+      if (reason !== null) {
+        updateOrderStatus(order.id, newStatus, reason);
+      }
+    } else {
+      updateOrderStatus(order.id, newStatus);
+    }
   };
 
   const handlePrintReceipt = () => {
@@ -71,6 +78,11 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({ 
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Current Status</span>
               <div className="text-xs font-bold text-slate-900 uppercase">{order.status.replace(/_/g, ' ')}</div>
+              {order.cancellationReason && (
+                <div className="text-[11px] text-red-600 font-semibold mt-0.5">
+                  Reason: {order.cancellationReason}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">

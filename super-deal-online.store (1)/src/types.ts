@@ -26,10 +26,13 @@ export interface Product {
   brand?: string;
   colors?: string[];
   warranty?: string;
+  slug?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface ProductCategory {
-  id: 'mobile-acc' | 'smart-watches' | 'airpods' | 'speakers' | 'beauty' | 'home' | 'electronics' | 'trending';
+  id: 'mobile-acc' | 'smart-watches' | 'airpods' | 'speakers' | 'beauty' | 'home' | 'electronics' | 'trending' | string;
   name: string;
   nameArabic?: string;
   iconName: string; // Lucide icon identifier
@@ -37,6 +40,9 @@ export interface ProductCategory {
   image: string;
   description: string;
   gradient: string;
+  slug?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface CartItem {
@@ -111,6 +117,16 @@ export interface OrderItem {
   image: string;
 }
 
+export interface OrderStatusHistoryItem {
+  id: string;
+  orderId: string;
+  status: string;
+  title: string;
+  description?: string;
+  createdAt: string;
+  updatedBy?: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -122,6 +138,8 @@ export interface Order {
   discount: number;
   total: number;
   status: 'pending' | 'processing' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  cancellationReason?: string;
+  statusHistory?: OrderStatusHistoryItem[];
   createdAt: string;
 }
 
