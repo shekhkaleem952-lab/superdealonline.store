@@ -20,6 +20,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; isAdmin?: boolean }>;
   adminSignIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  setupSuperAdminAccount: (password: string, fullName?: string, phone?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
 }
@@ -38,6 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchUserProfile = async (userId: string, email: string) => {
     if (!isSupabaseConfigured) return;
     try {
+      const isSuperEmail = email.toLowerCase() === 'info@superdealonline.store';
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -45,14 +48,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (data && !error) {
+        if (isSuperEmail && data.role !== 'super_admin') {
+          await supabase.from('users').update({ role: 'super_admin' }).eq('id', userId);
+          data.role = 'super_admin';
+        }
         setUserProfile(data as UserProfile);
       } else {
-        // Fallback default profile
+        const fallbackRole = isSuperEmail ? 'super_admin' : 'customer';
         setUserProfile({
           id: userId,
           email,
-          role: 'customer',
+          role: fallbackRole,
         });
+      }
+
+      if (isSuperEmail) {
+        await supabase.from('admins').upsert(
+          {
+            user_id: userId,
+            role: 'super_admin',
+            permissions: { all: true, full_access: true },
+          },
+          { onConflict: 'user_id' }
+        );
       }
     } catch (e) {
       console.error('Error fetching user profile:', e);
@@ -197,22 +215,124 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Setup Initial Super Admin Account
+  const setupSuperAdminAccount = async (
+    password: string,
+    fullName = 'Super Deal Lead Admin',
+    phone = '+974 5512 3456'
+  ) => {
+    const email = 'info@superdealonline.store';
+
+    if (!isSupabaseConfigured) {
+      const mockProfile: UserProfile = {
+        id: 'super-admin-1',
+        email,
+        full_name: fullName,
+        phone,
+        role: 'super_admin',
+      };
+      setUserProfile(mockProfile);
+      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(mockProfile));
+      return { error: null };
+    }
+
+    try {
+      // 1. Attempt to sign up Super Admin in Supabase Auth
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            phone,
+            role: 'super_admin',
+          },
+        },
+      });
+
+      if (signUpErr && !signUpErr.message.toLowerCase().includes('already registered')) {
+        return { error: signUpErr };
+      }
+
+      // 2. Sign in with the provided password
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInErr) {
+        return { error: signInErr };
+      }
+
+      if (signInData.user) {
+        const uid = signInData.user.id;
+        // 3. Upsert into public.users with super_admin role
+        await supabase.from('users').upsert(
+          {
+            id: uid,
+            email,
+            full_name: fullName,
+            phone,
+            role: 'super_admin',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        );
+
+        // 4. Upsert into public.admins table
+        await supabase.from('admins').upsert(
+          {
+            user_id: uid,
+            role: 'super_admin',
+            permissions: { all: true, full_access: true },
+          },
+          { onConflict: 'user_id' }
+        );
+
+        setUserProfile({
+          id: uid,
+          email,
+          full_name: fullName,
+          phone,
+          role: 'super_admin',
+        });
+      }
+
+      return { error: null };
+    } catch (e: any) {
+      return { error: e };
+    }
+  };
+
   // Admin Sign In
   const adminSignIn = async (email: string, password: string) => {
-    const res = await signIn(email, password);
+    const isTargetSuper = email.trim().toLowerCase() === 'info@superdealonline.store';
+    const res = await signIn(email.trim(), password);
     if (res.error) return { error: res.error };
-    
-    // Validate if the authenticated user has admin role
+
+    if (isSupabaseConfigured && (isTargetSuper || res.isAdmin)) {
+      if (user) {
+        if (isTargetSuper) {
+          await supabase.from('users').update({ role: 'super_admin' }).eq('id', user.id);
+          await supabase.from('admins').upsert(
+            { user_id: user.id, role: 'super_admin', permissions: { all: true } },
+            { onConflict: 'user_id' }
+          );
+          setUserProfile((prev) => (prev ? { ...prev, role: 'super_admin' } : null));
+        }
+      }
+      return { error: null };
+    }
+
     if (!res.isAdmin && isSupabaseConfigured) {
-      // Check admins table specifically
       if (user) {
         const { data: adminRecord } = await supabase
           .from('admins')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         if (adminRecord) {
-          setUserProfile((prev) => prev ? { ...prev, role: 'admin' } : null);
+          setUserProfile((prev) => (prev ? { ...prev, role: 'admin' } : null));
           return { error: null };
         }
       }
@@ -261,6 +381,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signIn,
         adminSignIn,
+        setupSuperAdminAccount,
         signOut,
         resetPassword,
       }}

@@ -43,106 +43,9 @@ const LOCAL_ORDERS_KEY = 'superdeal_store_orders_v2';
 const LOCAL_COMPANY_KEY = 'superdeal_store_company_v2';
 const LOCAL_CUSTOMERS_KEY = 'superdeal_store_customers_v2';
 
-const INITIAL_ORDERS: Order[] = [
-  {
-    id: 'ord-1001',
-    orderNumber: 'SDQ-98421',
-    date: '2026-07-28',
-    customer: {
-      fullName: 'Jassim Al-Thani',
-      phone: '+974 5512 3456',
-      email: 'jassim.thani@gmail.com',
-      city: 'Doha',
-      zoneArea: 'West Bay',
-      streetAddress: 'Diplomatic Area, Tower 4',
-      paymentMethod: 'cod',
-      notes: 'Please call 10 mins before arrival',
-    },
-    items: [
-      {
-        productId: 'm2-magsafe',
-        name: 'M2 Ultra Fast 20,000mAh Power Bank (MagSafe)',
-        price: 139,
-        quantity: 1,
-        image: 'https://images.unsplash.com/photo-1609592424009-dd2790610332?auto=format&fit=crop&q=80&w=800',
-      },
-    ],
-    subtotal: 139,
-    deliveryFee: 15,
-    discount: 0,
-    total: 154,
-    status: 'out_for_delivery',
-    createdAt: new Date().toISOString(),
-    statusHistory: [
-      { id: 'h-1', orderId: 'ord-1001', status: 'Pending', title: 'Order Placed', description: 'Order received via COD', createdAt: new Date(Date.now() - 86400000).toISOString() },
-      { id: 'h-2', orderId: 'ord-1001', status: 'Processing', title: 'Processing', description: 'Item checked and packed', createdAt: new Date(Date.now() - 43200000).toISOString() },
-      { id: 'h-3', orderId: 'ord-1001', status: 'Out for Delivery', title: 'Out for Delivery', description: 'Driver is en route in West Bay', createdAt: new Date().toISOString() },
-    ],
-  },
-  {
-    id: 'ord-1002',
-    orderNumber: 'SDQ-98422',
-    date: '2026-07-27',
-    customer: {
-      fullName: 'Fatima Al-Kuwari',
-      phone: '+974 6633 8901',
-      email: 'f.alkuwari@qatar.net.qa',
-      city: 'Lusail',
-      zoneArea: 'Marina Promenade',
-      streetAddress: 'Tower B, Apt 1204',
-      paymentMethod: 'card_pos',
-    },
-    items: [
-      {
-        productId: 'ultra-2-pro',
-        name: 'Ultra 2 Pro Max Smartwatch (AMOLED + Titanium)',
-        price: 199,
-        quantity: 1,
-        image: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&q=80&w=800',
-      },
-      {
-        productId: 'airpods-pro-2-anc',
-        name: 'AirPods Pro 2 Gen ANC Wireless Earbuds',
-        price: 149,
-        quantity: 1,
-        image: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&q=80&w=800',
-      },
-    ],
-    subtotal: 348,
-    deliveryFee: 0,
-    discount: 20,
-    total: 328,
-    status: 'processing',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    statusHistory: [
-      { id: 'h-4', orderId: 'ord-1002', status: 'Pending', title: 'Order Placed', description: 'Order received', createdAt: new Date(Date.now() - 86400000).toISOString() },
-      { id: 'h-5', orderId: 'ord-1002', status: 'Processing', title: 'Order Confirmed', description: 'Confirmed by store manager', createdAt: new Date(Date.now() - 40000000).toISOString() },
-    ],
-  },
-];
+const INITIAL_ORDERS: Order[] = [];
 
-const INITIAL_CUSTOMERS: Customer[] = [
-  {
-    id: 'cust-1',
-    fullName: 'Jassim Al-Thani',
-    phone: '+974 5512 3456',
-    email: 'jassim.thani@gmail.com',
-    city: 'Doha',
-    totalOrders: 3,
-    totalSpent: 485,
-    lastOrderDate: '2026-07-28',
-  },
-  {
-    id: 'cust-2',
-    fullName: 'Fatima Al-Kuwari',
-    phone: '+974 6633 8901',
-    email: 'f.alkuwari@qatar.net.qa',
-    city: 'Lusail',
-    totalOrders: 2,
-    totalSpent: 620,
-    lastOrderDate: '2026-07-27',
-  },
-];
+const INITIAL_CUSTOMERS: Customer[] = [];
 
 // Status mapper helpers
 const dbStatusToFrontend = (dbStatus: string): Order['status'] => {
@@ -330,12 +233,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .select('*, order_items(*), order_status_history(*)')
           .order('created_at', { ascending: false });
 
-        if (dbOrders && dbOrders.length > 0 && !ordErr) {
+        if (!ordErr && dbOrders) {
           const mappedOrders: Order[] = dbOrders.map((o) => {
-            const ship = typeof o.shipping_address === 'string' ? JSON.parse(o.shipping_address) : o.shipping_address || {};
+            let ship: any = {};
+            if (typeof o.shipping_address === 'string') {
+              try {
+                ship = JSON.parse(o.shipping_address);
+              } catch (e) {
+                ship = {};
+              }
+            } else if (o.shipping_address) {
+              ship = o.shipping_address;
+            }
+
             return {
               id: o.id,
-              orderNumber: o.order_number,
+              orderNumber: o.order_number || `SDQ-${o.id.slice(0, 6)}`,
               date: o.created_at ? o.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
               customer: {
                 fullName: o.customer_name || ship.fullName || 'Customer',
@@ -344,20 +257,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 city: ship.city || 'Doha',
                 zoneArea: ship.deliveryZone || ship.zoneArea || 'West Bay',
                 streetAddress: ship.streetAddress || '',
-                paymentMethod: o.payment_method === 'COD' ? 'cod' : 'card_pos',
+                paymentMethod: o.payment_method === 'Card on Delivery (POS)' || o.payment_method === 'card_pos' ? 'card_pos' : 'cod',
                 notes: o.order_notes || ship.notes || '',
               },
               items: (o.order_items || []).map((item: any) => ({
                 productId: item.product_id || 'prod',
                 name: item.product_name,
-                price: Number(item.unit_price),
-                quantity: item.quantity,
+                price: Number(item.unit_price || 0),
+                quantity: item.quantity || 1,
                 image: item.product_image || 'https://images.unsplash.com/photo-1609592424009-dd2790610332?auto=format&fit=crop&q=80&w=800',
               })),
-              subtotal: Number(o.subtotal),
+              subtotal: Number(o.subtotal || 0),
               deliveryFee: Number(o.delivery_fee || 0),
               discount: Number(o.discount_amount || 0),
-              total: Number(o.total_amount),
+              total: Number(o.total_amount || 0),
               status: dbStatusToFrontend(o.order_status),
               cancellationReason: o.cancellation_reason,
               statusHistory: (o.order_status_history || []).map((h: any) => ({
@@ -372,22 +285,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             };
           });
           setOrders(mappedOrders);
+        } else if (ordErr) {
+          console.error('Error fetching orders from Supabase:', ordErr);
         }
 
         // 4. Fetch Customers
-        const { data: dbCustomers } = await supabase.from('customers').select('*');
-        if (dbCustomers && dbCustomers.length > 0) {
+        const { data: dbCustomers, error: custErr } = await supabase
+          .from('customers')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!custErr && dbCustomers) {
           const mappedCusts: Customer[] = dbCustomers.map((c) => ({
             id: c.id,
-            fullName: c.full_name,
-            phone: c.phone,
-            email: c.email,
+            fullName: c.full_name || 'Customer',
+            phone: c.phone || '',
+            email: c.email || '',
             city: 'Doha',
             totalOrders: c.total_orders || 0,
             totalSpent: Number(c.total_spent || 0),
-            lastOrderDate: c.updated_at ? c.updated_at.split('T')[0] : '2026-07-29',
+            lastOrderDate: c.updated_at ? c.updated_at.split('T')[0] : (c.created_at ? c.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
           }));
           setCustomers(mappedCusts);
+        } else if (custErr) {
+          console.error('Error fetching customers from Supabase:', custErr);
         }
 
         // 5. Fetch Settings / Company Info
@@ -632,7 +553,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Order CRUD (with Order Status History & Cancellation Reason)
   const addOrder = async (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>): Promise<Order> => {
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    const randomNum = Math.floor(100000 + Math.random() * 900000);
     const orderNumber = `SDQ-${randomNum}`;
     const nowIso = new Date().toISOString();
 
@@ -649,6 +570,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...orderData,
       id: `ord-${Date.now()}`,
       orderNumber,
+      date: nowIso.split('T')[0],
       status: 'pending',
       createdAt: nowIso,
       statusHistory: [initialHistoryItem],
@@ -656,33 +578,41 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (isSupabaseConfigured) {
       try {
+        const paymentMethodDb = orderData.customer.paymentMethod === 'card_pos' ? 'Card on Delivery (POS)' : 'COD';
+
         const { data: dbOrder, error: orderErr } = await supabase
           .from('orders')
           .insert({
             order_number: orderNumber,
             customer_name: orderData.customer.fullName,
             customer_phone: orderData.customer.phone,
-            customer_email: orderData.customer.email,
+            customer_email: orderData.customer.email || null,
             shipping_address: orderData.customer,
             subtotal: orderData.subtotal,
             delivery_fee: orderData.deliveryFee,
             discount_amount: orderData.discount,
             total_amount: orderData.total,
-            payment_method: 'COD',
+            payment_method: paymentMethodDb,
             order_status: 'Pending',
             order_notes: orderData.customer.notes || '',
           })
           .select()
           .single();
 
-        if (dbOrder && !orderErr) {
+        if (orderErr) {
+          console.error('Error inserting into Supabase orders table:', orderErr);
+        }
+
+        if (dbOrder) {
           newOrder.id = dbOrder.id;
           initialHistoryItem.orderId = dbOrder.id;
 
           // Insert order items
+          const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
           const dbItems = orderData.items.map((item) => ({
             order_id: dbOrder.id,
-            product_id: item.productId && !item.productId.startsWith('m2-') && !item.productId.startsWith('ultra-') ? item.productId : null,
+            product_id: item.productId && uuidRegex.test(item.productId) ? item.productId : null,
             product_name: item.name,
             product_image: item.image,
             unit_price: item.price,
@@ -690,27 +620,53 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             total_price: item.price * item.quantity,
           }));
 
-          await supabase.from('order_items').insert(dbItems);
+          const { error: itemsErr } = await supabase.from('order_items').insert(dbItems);
+          if (itemsErr) {
+            console.error('Error inserting into order_items table:', itemsErr);
+          }
 
           // Insert initial status history
-          await supabase.from('order_status_history').insert({
+          const { error: histErr } = await supabase.from('order_status_history').insert({
             order_id: dbOrder.id,
             status: 'Pending',
             title: 'Order Placed',
-            description: 'Order placed via Cash on Delivery. Awaiting merchant confirmation.',
+            description: 'Order placed via Cash on Delivery in Qatar. Awaiting merchant confirmation.',
           });
+          if (histErr) {
+            console.error('Error inserting into order_status_history table:', histErr);
+          }
 
-          // Create or update customer record in database
-          await supabase.from('customers').upsert(
-            {
-              full_name: orderData.customer.fullName,
-              phone: orderData.customer.phone,
-              email: orderData.customer.email,
-              total_orders: 1,
-              total_spent: orderData.total,
-            },
-            { onConflict: 'phone' }
-          );
+          // Upsert customer in database
+          try {
+            const { data: existingCust } = await supabase
+              .from('customers')
+              .select('*')
+              .eq('phone', orderData.customer.phone)
+              .maybeSingle();
+
+            if (existingCust) {
+              await supabase
+                .from('customers')
+                .update({
+                  full_name: orderData.customer.fullName,
+                  email: orderData.customer.email || existingCust.email,
+                  total_orders: (existingCust.total_orders || 0) + 1,
+                  total_spent: Number(existingCust.total_spent || 0) + orderData.total,
+                  updated_at: nowIso,
+                })
+                .eq('id', existingCust.id);
+            } else {
+              await supabase.from('customers').insert({
+                full_name: orderData.customer.fullName,
+                phone: orderData.customer.phone,
+                email: orderData.customer.email || null,
+                total_orders: 1,
+                total_spent: orderData.total,
+              });
+            }
+          } catch (cErr) {
+            console.error('Error updating customer record in database:', cErr);
+          }
         }
       } catch (e) {
         console.error('Error writing order to Supabase:', e);
